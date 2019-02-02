@@ -1,0 +1,45 @@
+defaults
+  timeout connect 5000ms
+  timeout check 5000ms
+  timeout server 30000ms
+  timeout client 30000
+
+global
+  tune.ssl.default-dh-param 2048
+
+listen stats
+  bind :9000
+  mode http
+  stats enable
+  stats hide-version
+  stats realm Haproxy\ Statistics
+  stats uri /stats
+
+listen apiserver
+  bind :6443
+  mode tcp
+  balance roundrobin
+  option httpchk GET /healthz
+  http-check expect string ok
+
+  server apiserver1 10.10.0.11:6443 check check-ssl verify none
+  server apiserver2 10.10.0.12:6443 check check-ssl verify none
+  server apiserver3 10.10.0.13:6443 check check-ssl verify none
+
+listen ingress
+  bind :80
+  mode http
+  balance roundrobin
+
+  server worker1 10.10.0.21:30080 check
+  server worker2 10.10.0.22:30080 check
+  server worker3 10.10.0.23:30080 check
+
+listen ingress-443
+  bind :443 ssl crt /usr/local/etc/haproxy/local-ssl.pem
+  mode http
+  balance roundrobin
+
+  server worker1 10.10.0.21:30080 check
+  server worker2 10.10.0.21:30080 check
+  server worker3 10.10.0.23:30080 check
